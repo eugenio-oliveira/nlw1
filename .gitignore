@@ -1,3 +1,4 @@
 # Ignoring files and folders from backend
 backend/node_modules/
+backend/src/database/database.sqlite
 doc/

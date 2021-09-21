@@ -4,8 +4,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev --transpile-only --ignore-watch node_modules src/server.ts",
-    "knex:migrate" : "knex --knexfile knexfile.ts migrate:latest",
-    "knex:seed" : "knex --knexfile knexfile.ts seed:run"
+    "migrate:run" : "knex --knexfile knexfile.ts migrate:latest",
+    "migrate:seed" : "knex --knexfile knexfile.ts seed:run"
   },
   "license": "MIT",
   "dependencies": {
