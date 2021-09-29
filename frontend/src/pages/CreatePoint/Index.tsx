@@ -1,6 +1,6 @@
-import React, { useEffect, useState, ChangeEvent } from "react"
+import React, { useEffect, useState, ChangeEvent, FormEvent } from "react"
 import logo from '../../assets/logo.svg'
-import { Link } from 'react-router-dom'
+import { Link, useHistory } from 'react-router-dom'
 import { FiArrowLeft } from 'react-icons/fi'
 import { Map, TileLayer, Marker } from 'react-leaflet'
 import axios from "axios"
@@ -35,6 +35,9 @@ const CreatePoint = () => {
   const [selectedCity, setSelectedCity] = useState('0')
   const [selectedPosition, setSelectedPosition] = useState<[number, number]>([0,0])
   const [initialPosition, setInitialPosition] = useState<[number, number]>([0,0])
+  const [selectedItems, setSelectedItems] = useState<number[]>([])
+
+  const history = useHistory()
 
   const [formData, setFormData] = useState({
     name: '',
@@ -55,6 +58,26 @@ const CreatePoint = () => {
       setItems(response.data)
     })
   }, [])
+  
+  useEffect(() => {
+    axios.get<IBGEUfResponse[]>('https://servicodados.ibge.gov.br/api/v1/localidades/estados').then(response => {
+     const ufInitials = response.data.map(uf => uf.sigla)
+     setUfs(ufInitials)
+    })
+  }, [])
+
+  useEffect(() =>{
+    if(selectedUf === '0'){
+      return
+    }
+
+    axios.get<IBGECityResponse[]>(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedUf}/municipios/`).then(response => {
+      const cityNames = response.data.map(city => city.nome)
+      setCities(cityNames)
+     })
+
+
+  },[selectedUf])
 
 
   function handleSelectUf(event: ChangeEvent<HTMLSelectElement>){
@@ -77,26 +100,40 @@ const CreatePoint = () => {
    setFormData({...formData, [name]: value})
   }
 
+  function handleSelectItem(id: number){
 
-  useEffect(() => {
-    axios.get<IBGEUfResponse[]>('https://servicodados.ibge.gov.br/api/v1/localidades/estados').then(response => {
-     const ufInitials = response.data.map(uf => uf.sigla)
-     setUfs(ufInitials)
-    })
-  }, [])
-
-  useEffect(() =>{
-    if(selectedUf === '0'){
-      return
+    const alreadySelected = selectedItems.findIndex(item => item === id)
+    if(alreadySelected >= 0){
+      const filterdItems = selectedItems.filter(item=> item !== id)
+      setSelectedItems(filterdItems)
+    }else{
+      setSelectedItems([...selectedItems, id])
     }
 
-    axios.get<IBGECityResponse[]>(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedUf}/municipios/`).then(response => {
-      const cityNames = response.data.map(city => city.nome)
-      setCities(cityNames)
-     })
+  }
+
+  async function handleSubmit(event: FormEvent){
+    event.preventDefault()
+
+    const { name, email, whatsapp} = formData
+    const uf = selectedUf
+    const city = selectedCity
+    const [latitude, longitude] = selectedPosition
+    const items = selectedItems
+
+    const data = {
+      name, email, whatsapp, uf, city, latitude, longitude, items
+    }
+
+    //console.log(data)
+    await api.post('points', data)
+    alert('ponto de coleta criado com sucesso')
+    history.push('/')
+
+  }
 
 
-  },[selectedUf])
+  
 
   return(
     <div id="page-create-point">
@@ -107,7 +144,7 @@ const CreatePoint = () => {
           voltar para home
         </Link>
       </header>
-      <form>
+      <form onSubmit={handleSubmit}>
         <h1>Cadastro do ponto de coleta</h1>
         <fieldset>
           <legend>
@@ -180,7 +217,11 @@ const CreatePoint = () => {
           <ul className="items-grid">
            
             {items.map(item => (
-              <li key={item.id}>
+              <li
+               key={item.id}
+               onClick={() => handleSelectItem(item.id)}
+              className={selectedItems.includes(item.id) ? 'selected' : ''} 
+                >
               <img src={item.image_url} alt={item.title} />
               <span>{item.title}</span>
             </li>
